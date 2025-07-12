@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Leave a Review</title>
+  <style>
+    :root {
+      --bg: #111; --card: #1c1c1c; --accent: #4285f4;
+      --text: #fff; --sub: #aaa; --star: #555; --star-fill: #ffc107;
+    }
+    body {
+      background: var(--bg); color: var(--text); font-family: sans-serif;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh; margin: 0;
+    }
+    .card {
+      background: var(--card); padding: 24px; border-radius: 14px;
+      max-width: 400px; width: 90%; box-shadow: 0 0 20px #0007;
+    }
+    h1 { text-align: center; font-size: 20px; }
+    .stars { display: flex; justify-content: center; font-size: 28px; margin-bottom: 20px; }
+    .stars span { cursor: pointer; color: var(--star); }
+    .stars span.filled { color: var(--star-fill); }
+    label { display: block; margin-top: 12px; font-size: 14px; color: var(--sub); }
+    input, textarea {
+      width: 95%; border: none; border-radius: 8px; padding: 12px;
+      margin-top: 6px; background: #2b2b2b; color: var(--text);
+    }
+    textarea { min-height: 100px; resize: vertical; }
+    button {
+      width: 100%; margin-top: 20px; padding: 14px;
+      background: var(--accent); color: #fff; border: none;
+      border-radius: 24px; font-weight: bold; font-size: 16px; cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; }
+    .thankyou { display: none; text-align: center; font-size: 18px; padding: 40px 0; }
+  </style>
+</head>
+<body>
+
+<div class="card" id="form-card">
+  <img id="logo" width="150" style="display:block; margin:auto;" src="logo.png" alt="Logo">
+
+  <h1>Rate your experience</h1>
+  <form id="reviewForm" action="send_review.php" method="POST">
+    <div class="stars" id="starWidget">
+      <span data-v="1">★</span><span data-v="2">★</span>
+      <span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+    </div>
+    <input type="hidden" name="rating" id="rating" value="0" required>
+    <input type="hidden" name="toEmail" id="toEmail">
+    <input type="hidden" name="bid" id="bid">
+    <label>Name</label>
+    <input type="text" name="name" required placeholder="Your name">
+    <label>Phone</label>
+    <input type="tel" name="phone" required placeholder="05xxxxxxxx">
+    <label>Comment</label>
+    <textarea name="comment" required></textarea>
+
+    <!-- Tracking fields -->
+    <input type="hidden" name="ip" id="ip">
+    <input type="hidden" name="device" id="device">
+    <input type="hidden" name="location" id="location">
+
+    <button id="sendBtn" disabled>Send</button>
+  </form>
+  <div class="thankyou" id="thanks">✅ Thank you for your feedback!</div>
+</div>
+
+<script>
+  const stars = document.querySelectorAll('#starWidget span');
+  const rating = document.getElementById('rating');
+  const form = document.getElementById('reviewForm');
+  const sendBtn = document.getElementById('sendBtn');
+
+  function enableBtn() {
+    sendBtn.disabled = !(form.checkValidity() && parseInt(rating.value) > 0);
+  }
+
+  // Handle star click
+  stars.forEach(s => s.onclick = () => {
+    rating.value = s.dataset.v;
+    stars.forEach(st => st.classList.toggle('filled', st.dataset.v <= s.dataset.v));
+    enableBtn();
+  });
+
+  // Also enable when typing in fields
+  form.querySelectorAll('input, textarea').forEach(el => {
+    el.addEventListener('input', enableBtn);
+  });
+
+  // Submit handler
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const data = new FormData(form);
+    const res = await fetch(form.action, { method: 'POST', body: data });
+    if (res.ok) {
+      form.style.display = 'none';
+      document.getElementById('thanks').style.display = 'block';
+    } else {
+      alert('Failed to send. Please try again.');
+    }
+  });
+
+  // Get brand from URL and load logo/email/bid
+  const brand = new URLSearchParams(location.search).get('b');
+  fetch('get_brand.php?b=' + brand)
+    .then(r => r.json())
+    .then(cfg => {
+      document.getElementById('toEmail').value = cfg.email;
+      document.getElementById('logo').src = cfg.logo_url;
+      document.getElementById('bid').value = cfg.id;
+    });
+
+  // Track device type
+  const ua = navigator.userAgent;
+  document.getElementById('device').value = /Android|iPhone|iPad|iPod/i.test(ua)
+    ? 'Mobile' : /Windows|Mac|Linux/i.test(ua) ? 'Desktop' : 'Unknown';
+
+  // IP + Location from ipapi
+  fetch('https://ipapi.co/json/')
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('ip').value = data.ip;
+      document.getElementById('location').value = `${data.city}, ${data.region}, ${data.country_name}`;
+    });
+</script>
+
+</body>
+</html>

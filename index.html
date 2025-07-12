@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rate Us</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="wrapper2" style="display: block; margin-left: auto; margin-right: auto;">
+  <img id="logo" width="150" style="display: block; margin-left: auto; margin-right: auto;" src="logo.png" alt="Logo">
+  <div>&nbsp;</div>
+
+  <div class="wrapper" style="display: block; margin: auto; text-align: center;">
+    <a id="angryLink" href="#"><img width="120" height="120" src="emojis/emoji-1.png" alt="Bad"></a>
+    <a id="happyLink" target="_blank"><img width="120" height="120" src="emojis/emoji-4.png" alt="Good"></a>
+  </div>
+</div>
+
+<script>
+  const slug = new URLSearchParams(location.search).get('b') || 'batool';
+
+  function track(type) {
+    fetch('track_stat.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `slug=${encodeURIComponent(slug)}&type=${encodeURIComponent(type)}`
+    });
+  }
+
+  fetch('get_brand.php?b=' + slug)
+    .then(r => r.json())
+    .then(cfg => {
+      if (!cfg || cfg.error) return alert("Brand not found.");
+      document.getElementById('logo').src = cfg.logo_url;
+      document.getElementById('happyLink').href = 'https://search.google.com/local/writereview?placeid=' + cfg.google_link;
+      document.getElementById('angryLink').href = 'review.html?b=' + slug;
+      localStorage.setItem('feedbackEmail', cfg.email);
+
+      track('visit'); // log visit after successful load
+    });
+
+  document.getElementById('happyLink').addEventListener('click', () => track('happy'));
+  document.getElementById('angryLink').addEventListener('click', () => track('angry'));
+</script>
+
+</body>
+</html>
